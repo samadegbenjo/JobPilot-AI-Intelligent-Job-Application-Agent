@@ -228,15 +228,20 @@ def infer_form_fields_with_ai(fields, user_data_context, selected_provider="rule
     """
     Infers mappings for a list of webpage form fields to standardized user data keys.
 
-    This function orchestrates the field mapping process. It attempts to use a specified
-    AI provider (OpenAI, Gemini, Claude) if selected by the user and a valid API key is provided.
-    If an AI provider is chosen, it initializes the respective client, constructs a prompt
-    with the form field data and user data context, and (in a full implementation) would
-    make an API call to the AI service to get field mappings.
+    This function orchestrates the field mapping process.
+    If "openai" is the `selected_provider` and a valid API key is provided and the
+    OpenAI client initializes successfully, this function:
+    1. Constructs a detailed prompt for an OpenAI Chat Completions model (e.g., gpt-3.5-turbo).
+       The prompt includes the extracted webpage form fields and the available user data keys.
+    2. Makes an API call to OpenAI, requesting a JSON object as output.
+    3. Parses the AI's JSON response to get the field mappings.
+    4. If the OpenAI call or JSON parsing fails, it logs the error and falls back to the
+       rule-based mapping system.
 
-    Currently, the actual AI API calls are placeholder sections. If an AI provider is selected
-    but the call is not implemented or fails, or if "rule_based" is selected, the function
-    falls back to the `_find_mapping_rule_based` method.
+    For other AI providers ("gemini", "claude"), it currently logs that the implementation
+    is pending and defaults to rule-based mapping.
+    If "rule_based" is selected, or if any AI provider path fails before returning a
+    mapping, it uses the `_find_mapping_rule_based` method.
 
     Args:
         fields (list of dict): Data for each extracted form field from the webpage.
@@ -246,53 +251,247 @@ def infer_form_fields_with_ai(fields, user_data_context, selected_provider="rule
         selected_provider (str, optional): Identifier for the chosen AI service
             (e.g., "openai", "gemini", "claude"). Defaults to "rule_based".
         api_key (str, optional): The API key for the selected AI provider.
-            Required if `selected_provider` is not "rule_based".
+            Required if `selected_provider` is an AI model and not "rule_based".
 
     Returns:
         tuple: (mapped_fields, error_message)
             - mapped_fields (dict): A dictionary where keys are standardized user data keys
               (e.g., "firstName") and values are the 'tempId' (or 'id'/'name') of the
               corresponding webpage form field. Example: `{"email": "tempId_123"}`.
-            - error_message (str or None): A string containing an error message if a
-              significant issue occurred (e.g., client init failure for chosen provider if not falling back),
-              otherwise None. For rule-based or successful placeholder AI, this is usually None.
+              This can be an empty dict `{}` if no confident mappings are found.
+            - error_message (str or None): Currently, this function aims to always return a mapping
+              (even if empty or rule-based) and logs errors internally. So, `error_message`
+              is typically `None` from this function's direct return. Errors from `app.py`
+              might still occur for request-level issues.
     """
     app_logger = None
     try:
         from flask import current_app
         app_logger = current_app.logger
-        log_func = app_logger.info if app_logger else print
+        # Use specific logger levels if app_logger is available
+        log_info = app_logger.info if app_logger else print
+        log_warning = app_logger.warning if app_logger else print
+        log_error = app_logger.error if app_logger else print
+        log_debug = app_logger.debug if app_logger else print # For more verbose logs
     except RuntimeError: # Not in Flask app context
-        log_func = print
+        log_info = print
+        log_warning = print
+        log_error = print
+        log_debug = print
 
-    log_func(f"Inferring fields using provider: {selected_provider}. API key provided: {'Yes' if api_key else 'No'}.")
-    log_func(f"Number of fields to map: {len(fields)}. User data context keys: {list(user_data_context.keys()) if user_data_context else 'None'}")
+    log_info(f"--- infer_form_fields_with_ai ---")
+    log_info(f"Selected provider: {selected_provider}")
+    log_info(f"API key provided: {'Yes' if api_key else 'No'}")
+    log_info(f"Number of fields received: {len(fields)}")
+    if user_data_context:
+        log_debug(f"User data context keys: {list(user_data_context.keys())}")
+    else:
+        log_info("User data context: None")
+    log_debug(f"Received fields for mapping: {json.dumps(fields, indent=2)}")
 
 
-    ai_client = None
-    init_error = None
+    openai_client_instance = None # Will hold the initialized OpenAI client
+    # This variable will determine if we attempt an AI call or default to rule-based.
+    # It's set if a provider is chosen, library available, key provided, and client inits.
+    attempt_ai_call_for_provider = None
+    # Will hold the initialized client if successful for the target provider
+    initialized_ai_client = None
 
     if selected_provider == "openai":
-        ai_client, init_error = initialize_openai_client(api_key)
+        if not OPENAI_AVAILABLE:
+            log_warning("OpenAI provider selected, but the 'openai' library is not installed. Falling back to rule-based.")
+        elif not api_key:
+            log_warning("OpenAI provider selected, but no API key was provided. Falling back to rule-based.")
+        else:
+            client, init_error = initialize_openai_client(api_key)
+            if init_error:
+                log_error(f"OpenAI client initialization failed: {init_error}. Falling back to rule-based.")
+            elif client:
+                log_info("OpenAI client initialized successfully.")
+                initialized_ai_client = client
+                attempt_ai_call_for_provider = "openai"
+            else:
+                log_warning("OpenAI client initialization returned no client and no specific error. Falling back to rule-based.")
+
     elif selected_provider == "gemini":
-        ai_client, init_error = initialize_gemini_client(api_key)
+        # Similar logic for Gemini if it were being implemented now
+        if not GEMINI_AVAILABLE:
+            log_warning(f"Gemini provider selected, but 'google-generativeai' library not installed. Falling back to rule-based.")
+        # elif not api_key: ...
+        else:
+            # client, init_error = initialize_gemini_client(api_key) ...
+            log_info(f"'{selected_provider}' AI provider selected. Full API call implementation pending. Falling back to rule-based.")
+        # Force fallback for non-OpenAI providers in this focused step
+        attempt_ai_call_for_provider = None # Ensure it falls to rule-based
     elif selected_provider == "claude":
-        ai_client, init_error = initialize_claude_client(api_key)
+        if not ANTHROPIC_AVAILABLE:
+            log_warning(f"Claude provider selected, but 'anthropic' library not installed. Falling back to rule-based.")
+        # elif not api_key: ...
+        else:
+            log_info(f"'{selected_provider}' AI provider selected. Full API call implementation pending. Falling back to rule-based.")
+        attempt_ai_call_for_provider = None # Ensure it falls to rule-based
     elif selected_provider != "rule_based":
-        init_error = f"Unknown AI provider: {selected_provider}. Falling back to rule-based."
+        log_warning(f"Unknown AI provider: '{selected_provider}'. Falling back to rule-based.")
+        attempt_ai_call_for_provider = None # Ensure it falls to rule-based
 
-    if init_error:
-        log_func(f"AI Client Initialization Error for {selected_provider}: {init_error}")
-        # Fallback to rule-based if specific AI provider fails or is unknown
-        selected_provider = "rule_based"
-        log_func("Falling back to rule_based due to client initialization error.")
+    # Decision point: Attempt AI call or use rule-based
+    if attempt_ai_call_for_provider == "openai" and initialized_ai_client:
+        # --- OpenAI API Call Section ---
+        log_info(f"Attempting field mapping with OpenAI provider.")
+
+        # Construct the prompt for OpenAI.
+        # This involves preparing the extracted field data and user context keys in a format
+        # that the AI can easily understand and process.
+        prompt_fields_details = []
+        for f_idx, f_val in enumerate(fields): # Using enumerate to get an index for more robust temp ref if needed
+            field_ref = f_val.get('tempId') or f_val.get('id') or f_val.get('name') or f"unknown_field_{f_idx}"
+            field_detail = {
+                "field_ref": field_ref,
+                "label": f_val.get('labelText'),
+                "name_attr": f_val.get('name'),
+                "id_attr": f_val.get('id'),
+                "placeholder": f_val.get('placeholder'),
+                "aria_label": f_val.get('ariaLabel'),
+                "type": f_val.get('type'),
+                "tag": f_val.get('tagName')
+            }
+            prompt_fields_details.append({k: v for k, v in field_detail.items() if v is not None})
+        prompt_fields_json = json.dumps(prompt_fields_details, indent=2)
+
+        available_user_data_keys = sorted(list(user_data_context.keys() if user_data_context else []))
+        prompt_user_keys_json = json.dumps(available_user_data_keys, indent=2)
+
+        system_message = """You are an expert AI assistant specializing in web form field mapping for job applications.
+Your task is to analyze a list of HTML form fields extracted from a job application webpage and map them to a predefined set of standardized user data keys.
+The goal is to identify which webpage field corresponds to each piece of user information.
+You MUST output a valid JSON object, and nothing else.
+"""
+        user_prompt = f"""
+Analyze the following HTML form fields extracted from a webpage:
+```json
+{prompt_fields_json}
+```
+
+Your goal is to map these webpage fields to the most appropriate keys from the following list of available user data keys:
+```json
+{prompt_user_keys_json}
+```
+
+Mapping Instructions:
+1.  For each user data key from the "available user data keys" list, determine if there is a corresponding field in the "HTML form fields" list.
+2.  The "field_ref" value from the "HTML form fields" list is the identifier you MUST use for the webpage field in your mapping output.
+3.  Base your mapping on semantic similarity of the field's `label`, `name_attr`, `id_attr`, `placeholder`, `aria_label`, `type`, and `tag`.
+4.  Consider common variations (e.g., "First Name", "fname", "given_name" on a webpage could all map to a standard user data key like "firstName" if "firstName" is in the "available user data keys" list).
+5.  If a user data key clearly matches a webpage field, include that user data key in your output JSON object, with its value being the "field_ref" of the matched webpage field.
+6.  CRITICAL: If a user data key does not have a clear and confident corresponding field on the webpage, DO NOT include that user data key in your output JSON. Only return confident mappings.
+7.  The output MUST be a single, valid JSON object. Do not include any explanations, apologies, or conversational text before or after the JSON object.
+
+Example of desired JSON output format (if "fullName", "email", and "visaStatus" were mappable user data keys):
+{{
+  "fullName": "some_field_ref_abc",
+  "email": "field_temp_id_123",
+  "visaStatus": "visa_dropdown_ref_xyz"
+}}
+
+If no fields can be confidently mapped, return an empty JSON object: {{}}
+
+Now, provide the JSON object for the given fields and user data keys.
+"""
+        log_debug(f"System Message for OpenAI: {system_message}") # Log full system message at debug
+        log_info(f"Constructed OpenAI User Prompt (length: {len(user_prompt)} chars). First 300: {user_prompt[:300]}...")
+        log_debug(f"Full OpenAI User Prompt: {user_prompt}")
+
+        ai_result_str = "" # Initialize for potential use in error logging if API response is malformed
+        try:
+            # Make the actual API call to OpenAI
+            log_info(f"Attempting OpenAI API call with model 'gpt-3.5-turbo'...")
+            response = initialized_ai_client.chat.completions.create(
+                model="gpt-3.5-turbo", # Or a more advanced model like "gpt-4-turbo" if available/needed
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"}, # Request JSON output
+                temperature=0.2 # Lower temperature for more deterministic, less creative output
+            )
+            ai_result_str = response.choices[0].message.content
+            log_debug(f"Raw response string from OpenAI: {ai_result_str}")
+
+            # Parse the JSON string response from the AI
+            mapped_fields_from_ai = json.loads(ai_result_str)
+            log_info(f"Successfully parsed OpenAI response. Found {len(mapped_fields_from_ai)} mappings.")
+            log_debug(f"OpenAI Mapped Fields: {json.dumps(mapped_fields_from_ai, indent=2)}")
+            return mapped_fields_from_ai, None # Return successful AI mapping
+
+        except json.JSONDecodeError as json_err: # Handle cases where AI output isn't valid JSON
+            log_error(f"OpenAI response was not valid JSON: {json_err}. Raw response snippet: {ai_result_str[:500]}")
+        except openai.APIError as api_err: # Handle specific OpenAI API errors (network, rate limits, auth etc.)
+            log_error(f"OpenAI API Error occurred: {api_err}.")
+        except Exception as e: # Handle any other unexpected errors during the API call or processing
+            log_error(f"Unexpected error during OpenAI API call or processing: {str(e)}.")
+
+        # If any exception occurs in the try block, log warning and fall through to rule-based.
+        log_warning("OpenAI call failed or an error occurred in processing its response. Falling back to rule-based mapping.")
+
+    # --- Rule-Based Fallback Implementation ---
+    # This section is reached if:
+    # - 'rule_based' was the selected_provider.
+    # - An AI provider was selected, but its library was unavailable, API key was missing, or client initialization failed.
+    # - The OpenAI API call attempt failed (due to API error, JSON parsing error, or other exception).
+    # Determine if we need to run rule-based:
+    # - If selected_provider was 'rule_based' initially.
+    # - If selected_provider was an AI but attempt_ai_call_for_provider was not set (e.g., lib missing, key missing, client init failed).
+    # - If attempt_ai_call_for_provider was set (e.g. "openai") but the try-except block above was entered due to API call failure.
+
+    # The log_func needs to be defined if it wasn't in the AI path or if an error occurred early.
+    # This is a bit redundant with the top definition but ensures it's available if flow is complex.
+    if 'log_info' not in locals(): # Check one of them
+        try: from flask import current_app; app_logger_fb = current_app.logger
+        except RuntimeError: app_logger_fb = None
+        log_info = app_logger_fb.info if app_logger_fb else print
+        log_warning = app_logger_fb.warning if app_logger_fb else print
+        log_error = app_logger_fb.error if app_logger_fb else print
+        log_debug = app_logger_fb.debug if app_logger_fb else print
+
+    log_info("Executing rule-based mapping.")
+
+    inferred_mappings = {}
+    unmapped_fields_details = []
+
+    for field_obj in fields:
+        page_field_identifier = field_obj.get('tempId') or field_obj.get('id') or field_obj.get('name')
+
+        if not page_field_identifier:
+            unmapped_fields_details.append(field_obj)
+            log_func(f"Skipping field due to missing identifier: {field_obj}")
+            continue
+
+        standardized_key = _find_mapping_rule_based(field_obj)
+
+        if standardized_key:
+            if standardized_key not in inferred_mappings:
+                inferred_mappings[standardized_key] = page_field_identifier
+            else:
+                log_msg_conflict = (f"Rule-based: Standard key '{standardized_key}' already mapped to "
+                                    f"'{inferred_mappings[standardized_key]}'. Ignoring new candidate "
+                                    f"'{page_field_identifier}' for field: {field_obj.get('labelText') or field_obj.get('name')}.")
+                log_func(log_msg_conflict)
+        else:
+            unmapped_fields_details.append(field_obj)
+
+    num_mapped = len(inferred_mappings)
+    num_unmapped = len(unmapped_fields_details)
+    log_summary = f"Rule-based mapping complete. Mapped: {num_mapped} fields, Unmapped: {num_unmapped} fields."
+    log_func(log_summary)
+    if num_unmapped > 0 and app_logger:
+        app_logger.debug(f"Unmapped fields details (rule-based): {unmapped_fields_details}")
+    elif num_unmapped > 0:
+         print(f"Unmapped fields details (rule-based): {unmapped_fields_details}")
+
+    return inferred_mappings, None
 
 
-    if selected_provider != "rule_based" and ai_client:
-        # --- Actual AI Call Section (Placeholder for now) ---
-        log_func(f"Attempting to use AI provider: {selected_provider}")
-
-        # Step 2: Construct a prompt for the AI
+if __name__ == '__main__':
         # This is a generic prompt and would need significant refinement for each AI model.
         # It should include the extracted `fields`, the `user_data_context` keys (or relevant values),
         # and clear instructions on the desired JSON output format for mappings.
