@@ -239,16 +239,27 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function showStatusMessage(message, isError = false) {
         statusMessageElement.textContent = message;
-        statusMessageElement.className = 'status-message'; // Reset classes
+        // Reset classes, then add base and type-specific, then trigger visibility
+        statusMessageElement.className = 'status-message'; // Base class
+
         if (isError) {
             statusMessageElement.classList.add('error');
         } else {
             statusMessageElement.classList.add('success');
         }
+
+        // Make it visible to trigger animation
+        statusMessageElement.classList.add('visible');
+
+        // Set a timeout to hide it again
         setTimeout(() => {
-            statusMessageElement.textContent = '';
-            statusMessageElement.className = 'status-message';
-        }, 3000); // Hide message after 3 seconds
+            statusMessageElement.classList.remove('visible');
+            // Optional: Clean up type classes after transition out, though not strictly necessary
+            // setTimeout(() => {
+            //    statusMessageElement.classList.remove('success', 'error');
+            //    statusMessageElement.textContent = ''; // Clear text after fade out
+            // }, 300); // Matches transition duration
+        }, 3000); // Duration message stays visible
     }
 
     // --- Event Listeners & Initialization ---
@@ -263,34 +274,71 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /**
-     * Shows or hides the API key input fields based on the currently selected AI Provider.
-     * For "rule_based", all API key fields are hidden.
-     * For specific AI providers (e.g., "openai", "gemini"), the corresponding API key field is shown.
+     * Shows or hides API key input fields by toggling the '.visible' CSS class,
+     * allowing CSS transitions to animate the appearance/disappearance.
+     * Visibility is based on the currently selected AI Provider in the dropdown.
      */
     function toggleApiKeyVisibility() {
         const selectedProvider = aiProviderSelect.value;
-        // Hide all first, then show the relevant one.
-        apiKeyOpenAIGroup.style.display = 'none';
-        apiKeyGeminiGroup.style.display = 'none';
-        apiKeyClaudeGroup.style.display = 'none';
+        // Remove 'visible' class from all, then add to the selected one.
+        [apiKeyOpenAIGroup, apiKeyGeminiGroup, apiKeyClaudeGroup].forEach(group => {
+            group.classList.remove('visible');
+        });
 
         if (selectedProvider === 'openai') {
-            apiKeyOpenAIGroup.style.display = 'block';
+            apiKeyOpenAIGroup.classList.add('visible');
         } else if (selectedProvider === 'gemini') {
-            apiKeyGeminiGroup.style.display = 'block';
+            apiKeyGeminiGroup.classList.add('visible');
         } else if (selectedProvider === 'claude') {
-            apiKeyClaudeGroup.style.display = 'block';
+            apiKeyClaudeGroup.classList.add('visible');
         }
         // Add more providers here with else if blocks if needed.
     }
 
     /**
-     * Shows or hides the 'relocationSpecifics' text input field based on the
-     * selection in the 'relocation' dropdown. It's shown only if "Yes (Specific locations only)"
-     * is selected.
+     * Shows or hides the 'relocationSpecifics' text input field by toggling
+     * the '.visible' CSS class, enabling CSS transitions.
+     * The field is shown only if "Yes (Specific locations only)" is selected in the relocation dropdown.
      */
     function toggleRelocationSpecifics() {
-        relocationSpecificsElement.style.display = (relocationElement.value === 'yes_specific') ? 'block' : 'none';
+        if (relocationElement.value === 'yes_specific') {
+            relocationSpecificsElement.classList.add('visible');
+        } else {
+            relocationSpecificsElement.classList.remove('visible');
+        }
+    }
+
+    /**
+     * Displays a status message to the user in the popup, using CSS classes for styling and animation.
+     * The message automatically disappears after a set duration (3 seconds).
+     * It adds/removes '.visible', '.success', and '.error' classes to control appearance.
+     * @param {string} message - The message to display.
+     * @param {boolean} [isError=false] - If true, styles the message as an error; otherwise, as success.
+     */
+    function showStatusMessage(message, isError = false) {
+        statusMessageElement.textContent = message;
+        // Reset classes, then add base and type-specific, then trigger visibility
+        statusMessageElement.className = 'status-message'; // Base class
+
+        if (isError) {
+            statusMessageElement.classList.add('error');
+        } else {
+            statusMessageElement.classList.add('success');
+        }
+
+        // Make it visible to trigger animation defined in CSS
+        statusMessageElement.classList.add('visible');
+
+        // Set a timeout to hide it again by removing the .visible class
+        setTimeout(() => {
+            statusMessageElement.classList.remove('visible');
+            // Optional: Clean up type classes after transition out, though not strictly necessary
+            // as they are reset at the start of this function anyway.
+            // setTimeout(() => {
+            //    statusMessageElement.classList.remove('success', 'error');
+            //    statusMessageElement.textContent = ''; // Clear text after fade out
+            // }, 300); // Should match CSS transition duration for opacity/transform
+        }, 3000); // Duration message stays visible
     }
 
     // --- Event Listeners for UI Interactivity & Actions ---
@@ -303,11 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Event listener for the "Fill Current Page" button.
-     * Sends a message to the background script (`background.js`) to initiate the
-     * full page filling orchestration process. Handles basic response feedback.
+     * Sends an 'INITIATE_PAGE_FILL' message to the background script (`background.js`)
+     * to start the page filling process. Handles basic response feedback or errors.
      */
     fillCurrentPageButton.addEventListener('click', () => {
-        showStatusMessage('Initiating page fill...', false);
+        showStatusMessage('Initiating page fill...', false); // Provide immediate feedback
         chrome.runtime.sendMessage({ action: 'INITIATE_PAGE_FILL' }, (response) => {
             if (chrome.runtime.lastError) {
                 const errorMsg = `Error sending fill request: ${chrome.runtime.lastError.message}`;

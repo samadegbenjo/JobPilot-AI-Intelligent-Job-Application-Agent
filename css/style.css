@@ -1,55 +1,130 @@
+:root {
+    --primary-color: #007bff;
+    --primary-color-dark: #0056b3;
+    --primary-color-light: #63a4ff;
+    --secondary-color: #6c757d; /* For less important elements or text */
+    --success-color: #28a745;
+    --success-bg-color: #d4edda;
+    --success-border-color: #c3e6cb;
+    --error-color: #dc3545;
+    --error-bg-color: #f8d7da;
+    --error-border-color: #f5c6cb;
+
+    --body-bg-color: #f8f9fa;
+    --container-bg-color: #ffffff;
+    --section-bg-color: #ffffff; /* Changed from #f9f9f9 for a flatter card look */
+
+    --text-color-headings: #343a40;
+    --text-color-body: #495057;
+    --text-color-muted: #6c757d; /* For placeholders, small text */
+    --text-color-on-primary: #ffffff;
+
+    --border-color: #dee2e6; /* Light gray for borders */
+    --input-border-color: #ced4da;
+    --input-focus-border-color: var(--primary-color-light);
+    --input-focus-box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+
+    --border-radius-sm: 0.2rem;  /* 3.2px approx */
+    --border-radius-md: 0.25rem; /* 4px */
+    --border-radius-lg: 0.3rem;  /* 4.8px approx */
+
+    --font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --font-size-base: 14px; /* Base font size for popup */
+    --font-size-sm: 0.875em; /* Approx 12px */
+    --font-size-xs: 0.75em;  /* Approx 10.5px */
+    --font-size-h1: 1.5em;   /* Approx 21px */
+    --font-size-h2: 1.25em;  /* Approx 17.5px */
+
+    --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Subtle shadow for sections/container */
+    --transition-base: all 0.2s ease-in-out;
+}
+
 body {
-    font-family: sans-serif;
-    margin: 10px;
-    background-color: #f4f4f9;
-    color: #333;
-    width: 380px; /* Adjusted width for more content */
+    font-family: var(--font-family-sans-serif);
+    margin: 0; /* Remove default margin */
+    background-color: var(--body-bg-color);
+    color: var(--text-color-body);
+    width: 380px;
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    overflow: hidden; /* Hide scrollbars during popup animation to prevent flicker */
+    animation: popupOpenFade 0.3s ease-out forwards; /* Apply opening animation to the body */
+}
+
+/* Animation for the popup body to fade in smoothly */
+@keyframes popupOpenFade {
+    from {
+        opacity: 0;
+        /* transform: translateY(-10px); */ /* Optional: adds a slight slide-down effect */
+    }
+    to {
+        opacity: 1;
+        /* transform: translateY(0); */
+    }
 }
 
 .container {
-    background-color: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--container-bg-color);
+    padding: 16px; /* Consistent padding */
+    border-radius: 0;
+    /* animation: popupContentSlideIn 0.4s 0.1s ease-out forwards; */ /* Content slides slightly later */
+    opacity: 1; /* Start with opacity 1 as body handles fade */
 }
+
+/*
+@keyframes popupContentSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+*/
 
 h1 {
     text-align: center;
-    color: #0056b3; /* Theme color */
-    font-size: 20px;
-    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-size: var(--font-size-h1);
+    margin-top: 0;
+    margin-bottom: 20px; /* Increased margin */
 }
 
 h2 {
-    font-size: 16px;
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    font-size: var(--font-size-h2);
+    color: var(--text-color-headings);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px; /* Increased padding */
+    margin-top: 24px; /* Increased margin */
+    margin-bottom: 16px; /* Increased margin */
     display: flex;
     align-items: center;
 }
 
 .icon {
-    width: 16px;
-    height: 16px;
+    width: 1em; /* Relative to font size of parent (h2) */
+    height: 1em;
     margin-right: 8px;
+    fill: currentColor; /* Allows SVG icons to inherit color */
 }
 
 .section {
-    margin-bottom: 20px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background-color: #f9f9f9;
+    margin-bottom: 24px; /* Increased spacing */
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background-color: var(--section-bg-color);
+    box-shadow: var(--box-shadow);
 }
 
 label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 13px;
+    margin-bottom: 6px; /* Slightly increased */
+    font-weight: 600; /* Slightly bolder */
+    font-size: var(--font-size-base); /* Explicitly set */
+    color: var(--text-color-body);
 }
 
 input[type="text"],
@@ -58,87 +133,130 @@ input[type="tel"],
 input[type="url"],
 input[type="password"],
 input[type="file"],
-textarea {
-    width: calc(100% - 22px); /* Account for padding */
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+input[type="date"], /* Added date input */
+textarea,
+select { /* Added select styling */
+    width: 100%; /* Let box-sizing handle padding */
+    padding: 8px 12px; /* Standardized padding */
+    margin-bottom: 12px; /* Standardized margin */
+    border: 1px solid var(--input-border-color);
+    border-radius: var(--border-radius-md);
     box-sizing: border-box;
-    font-size: 13px;
+    font-size: var(--font-size-base);
+    background-color: var(--container-bg-color); /* Inputs on white background */
+    color: var(--text-color-body);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="password"]:focus,
+input[type="file"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--input-focus-border-color);
+    box-shadow: var(--input-focus-box-shadow);
+}
+
+
 input[type="file"] {
-    padding: 3px;
+    padding: 6px; /* Adjusted for file input */
 }
 
 textarea {
     resize: vertical;
-    min-height: 60px;
+    min-height: 70px; /* Slightly taller */
 }
 
-button {
-    background-color: #0056b3; /* Theme color */
-    color: white;
-    padding: 10px 15px;
+button, .button /* Added .button class for general button styling */ {
+    background-color: var(--primary-color);
+    color: var(--text-color-on-primary);
+    padding: 10px 16px; /* Adjusted padding */
     border: none;
-    border-radius: 4px;
+    border-radius: var(--border-radius-md);
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--font-size-base);
+    font-weight: 500;
     display: block;
     width: 100%;
-    margin-top: 10px;
+    margin-top: 12px; /* Standardized margin */
+    text-align: center;
+    transition: background-color var(--transition-base), transform 0.1s ease-out;
 }
 
-button:hover {
-    background-color: #004494; /* Darker shade for hover */
+button:hover, .button:hover {
+    background-color: var(--primary-color-dark);
 }
+
+button:active, .button:active {
+    transform: scale(0.98); /* Subtle press effect */
+    background-color: var(--primary-color-dark);
+}
+
 
 .status-message {
-    margin-top: 10px;
-    font-size: 13px;
+    margin-top: 16px;
+    font-size: var(--font-size-sm);
     text-align: center;
-    padding: 8px;
-    border-radius: 4px;
+    padding: 10px;
+    border-radius: var(--border-radius-md);
+    border-width: 1px;
+    border-style: solid;
+    opacity: 0; /* Start hidden for animation */
+    transform: translateY(20px); /* Start off-screen for slide-in */
+    visibility: hidden; /* Use visibility to prevent interaction when hidden */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out, visibility 0s 0.3s; /* Delay visibility change */
 }
 
-.status-message.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+.status-message.visible {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out, visibility 0s 0s;
 }
 
-.status-message.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+/* Specific styles for success and error messages */
+.status-message.success.visible { /* Ensure visibility applies to colored versions too */
+    background-color: var(--success-bg-color);
+    color: var(--success-color);
+    border-color: var(--success-border-color);
+}
+
+.status-message.error.visible {
+    background-color: var(--error-bg-color);
+    color: var(--error-color);
+    border-color: var(--error-border-color);
 }
 
 .file-name-display {
-    font-size: 12px;
-    color: #555;
-    margin-top: -5px;
-    margin-bottom: 10px;
+    font-size: var(--font-size-sm);
+    color: var(--text-color-muted);
+    margin-top: -8px; /* Adjusted */
+    margin-bottom: 12px;
     word-break: break-all;
 }
 
 .small-text {
-    font-size: 11px;
-    color: #666;
+    font-size: var(--font-size-xs);
+    color: var(--text-color-muted);
     margin-bottom: 8px;
 }
 
-/* Toggle Switch Styles */
+/* Toggle Switch Styles - Refined */
 .switch {
     position: relative;
     display: inline-block;
-    width: 50px; /* smaller switch */
-    height: 24px; /* smaller switch */
+    width: 44px; /* Slightly smaller for refinement */
+    height: 22px;
     vertical-align: middle;
-    margin-left: 10px;
+    margin-left: 8px;
 }
 
-.switch input {
+.switch input { /* Keep hidden */
     opacity: 0;
     width: 0;
     height: 0;
@@ -151,27 +269,27 @@ button:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
+    background-color: var(--input-border-color); /* Use a theme color */
+    transition: var(--transition-base);
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 18px; /* smaller handle */
-    width: 18px; /* smaller handle */
-    left: 3px; /* adjusted position */
-    bottom: 3px; /* adjusted position */
+    height: 16px; /* Adjusted */
+    width: 16px;  /* Adjusted */
+    left: 3px;    /* Adjusted */
+    bottom: 3px;  /* Adjusted */
     background-color: white;
-    transition: .4s;
+    transition: var(--transition-base);
 }
 
 input:checked + .slider {
-    background-color: #0056b3; /* Theme color */
+    background-color: var(--primary-color);
 }
 
-input:focus + .slider {
-    box-shadow: 0 0 1px #0056b3;
+input:focus + .slider { /* Focus state for accessibility */
+    box-shadow: 0 0 1px var(--primary-color);
 }
 
 input:checked + .slider:before {
@@ -179,56 +297,92 @@ input:checked + .slider:before {
 }
 
 .slider.round {
-    border-radius: 24px; /* adjusted for size */
+    border-radius: 22px; /* Ensure it's fully rounded */
 }
 
 .slider.round:before {
     border-radius: 50%;
 }
 
-/* Styles for API Key Provider Selection */
+/* Styles for API Key Provider Selection with smooth transitions */
 .api-key-input-group {
     margin-top: 10px;
-    padding: 8px;
-    border: 1px dashed #ddd;
-    border-radius: 4px;
-    background-color: #fdfdfd;
+    padding: 0; /* Padding is transitioned; applied when .visible */
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--body-bg-color);
+    overflow: hidden; /* Essential for max-height transition to work visually */
+    max-height: 0;    /* Start collapsed */
+    opacity: 0;       /* Start fully transparent */
+    /* Transitions for smooth appearance/disappearance. Timings can be adjusted. */
+    transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out, padding 0.4s ease-in-out;
+}
+
+.api-key-input-group.visible {
+    max-height: 150px; /* Target height when visible. Adjust if content (labels, inputs) needs more space. */
+    opacity: 1;       /* Fully visible */
+    padding: 12px;    /* Padding applied when section is visible */
 }
 
 .api-key-input-group label {
-    font-weight: normal; /* Less emphasis than section labels */
-    font-size: 12px;
+    font-weight: normal;
+    font-size: var(--font-size-sm);
+    color: var(--text-color-muted);
 }
 
-/* Action button specific style if different from main save button */
+/* Action button specific style */
 .action-button {
-    background-color: #28a745; /* Green for action */
+    background-color: var(--success-color);
 }
 .action-button:hover {
-    background-color: #218838;
+    background-color: #1e7e34; /* Darker green */
+}
+.action-button:active {
+    background-color: #1e7e34;
+    transform: scale(0.98);
 }
 
+/* Save button uses primary color by default from .button class */
 .save-button {
- /* Uses default button styles, or can be customized if needed */
+    /* Inherits from button class */
 }
 
 select {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 13px;
-    background-color: white;
+    background-color: var(--container-bg-color);
+    color: var(--text-color-body);
 }
 
 input[type="date"] {
-    width: calc(100% - 22px); /* Match other inputs */
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 13px;
+    color-scheme: light;
+}
+
+/* Styling for smooth transition of relocationSpecifics field */
+#relocationSpecifics {
+    display: block; /* Ensures it takes up block space for margin/padding transitions */
+    overflow: hidden; /* Essential for max-height transition */
+    max-height: 0;    /* Start collapsed */
+    opacity: 0;       /* Start transparent */
+    padding-top: 0;   /* Collapse padding */
+    padding-bottom: 0;
+    margin-top: 0;    /* Collapse margins */
+    margin-bottom: 0;
+    border-top-width: 0; /* Collapse border */
+    border-bottom-width: 0;
+    /* Transitions for various properties to create a smooth reveal/hide effect */
+    transition: max-height 0.3s ease-in-out,
+                opacity 0.2s ease-in-out,
+                padding 0.3s ease-in-out,
+                margin 0.3s ease-in-out,
+                border-width 0.3s ease-in-out;
+}
+
+#relocationSpecifics.visible {
+    max-height: 100px; /* Target height. Adjust if input field needs more space. */
+    opacity: 1;
+    padding-top: 8px;    /* Restore padding */
+    padding-bottom: 8px;
+    margin-top: 4px;     /* Restore margins */
+    margin-bottom: 12px;
+    border-top-width: 1px; /* Restore border */
+    border-bottom-width: 1px;
 }
