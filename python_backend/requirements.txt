@@ -1,0 +1,8 @@
+Flask>=2.0
+Flask-CORS>=3.0
+python-docx>=1.0.0
+pdfminer.six>=20220506
+# Add any other libraries needed for AI interaction later, e.g.:
+# openai
+# google-generativeai
+# cohere

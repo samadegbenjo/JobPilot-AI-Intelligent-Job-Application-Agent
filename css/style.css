@@ -1,0 +1,187 @@
+body {
+    font-family: sans-serif;
+    margin: 10px;
+    background-color: #f4f4f9;
+    color: #333;
+    width: 380px; /* Adjusted width for more content */
+}
+
+.container {
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #0056b3; /* Theme color */
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+h2 {
+    font-size: 16px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+.section {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+input[type="file"],
+textarea {
+    width: calc(100% - 22px); /* Account for padding */
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 13px;
+}
+
+input[type="file"] {
+    padding: 3px;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+button {
+    background-color: #0056b3; /* Theme color */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #004494; /* Darker shade for hover */
+}
+
+.status-message {
+    margin-top: 10px;
+    font-size: 13px;
+    text-align: center;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.file-name-display {
+    font-size: 12px;
+    color: #555;
+    margin-top: -5px;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.small-text {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+/* Toggle Switch Styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px; /* smaller switch */
+    height: 24px; /* smaller switch */
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px; /* smaller handle */
+    width: 18px; /* smaller handle */
+    left: 3px; /* adjusted position */
+    bottom: 3px; /* adjusted position */
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #0056b3; /* Theme color */
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #0056b3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px); /* adjusted movement */
+}
+
+.slider.round {
+    border-radius: 24px; /* adjusted for size */
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
