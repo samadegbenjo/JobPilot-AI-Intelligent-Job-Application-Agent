@@ -185,3 +185,50 @@ input:checked + .slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
+
+/* Styles for API Key Provider Selection */
+.api-key-input-group {
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+    background-color: #fdfdfd;
+}
+
+.api-key-input-group label {
+    font-weight: normal; /* Less emphasis than section labels */
+    font-size: 12px;
+}
+
+/* Action button specific style if different from main save button */
+.action-button {
+    background-color: #28a745; /* Green for action */
+}
+.action-button:hover {
+    background-color: #218838;
+}
+
+.save-button {
+ /* Uses default button styles, or can be customized if needed */
+}
+
+select {
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 13px;
+    background-color: white;
+}
+
+input[type="date"] {
+    width: calc(100% - 22px); /* Match other inputs */
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 13px;
+}

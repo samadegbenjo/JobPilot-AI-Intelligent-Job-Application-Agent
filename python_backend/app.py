@@ -83,14 +83,21 @@ def handle_infer_fields():
     Expects JSON in request body:
     {
         "fields": [
-            {"id": "...", "name": "...", "type": "...", "label": "...", ...},
-            ...
+            {"tempId": "...", "id": "...", "name": "...", "type": "...", "labelText": "...", ...},
+            // ... other field objects
         ],
-        "api_key": "<user_provided_ai_service_api_key>" (optional)
+        "user_data_context": { // Comprehensive data from user's profile, resume, and employment Qs
+            "fullName": "Jane Doe",
+            "email": "jane.doe@example.com",
+            "visaStatus": "no",
+            // ... other user data fields
+        },
+        "selected_ai_provider": "<provider_identifier_string>", // e.g., "openai", "gemini", "claude", "rule_based"
+        "api_key": "<user_provided_api_key_for_the_selected_provider>" // Optional, null if rule_based or key not set
     }
 
     Returns:
-        JSON: On success (200), {"message": "Fields inferred successfully", "mapped_fields": {standard_key: page_field_id}}.
+        JSON: On success (200), {"message": "Fields inferred successfully", "mapped_fields": {standard_key: page_field_tempId_or_id}}.
               On error (400, 500), {"error": "<error_description>"}.
     """
     try:
@@ -99,17 +106,28 @@ def handle_infer_fields():
             return jsonify({"error": "No data provided"}), 400
 
         fields = data.get('fields')
-        api_key = data.get('api_key') # User's API key for an AI service
+        user_data_context = data.get('user_data_context') # For providing more context to AI
+        selected_ai_provider = data.get('selected_ai_provider', 'rule_based') # Default to rule_based
+        api_key = data.get('api_key')
 
         if not fields:
-            return jsonify({"error": "Missing 'fields' data"}), 400
+            return jsonify({"error": "Missing 'fields' data from request"}), 400
+
+        if not user_data_context:
+            app.logger.warning("/infer_fields called without 'user_data_context'. AI might be less effective.")
+            # Proceeding, but AI's performance might be degraded.
 
         # Call the AI handler logic (from ai_handler.py)
-        # This function would interact with an AI service
-        mapped_fields, error = infer_form_fields_with_ai(fields, api_key)
+        # Pass all relevant data including the selected provider and specific key
+        mapped_fields, error = infer_form_fields_with_ai(
+            fields=fields,
+            user_data_context=user_data_context,
+            selected_provider=selected_ai_provider,
+            api_key=api_key
+        )
 
         if error:
-            app.logger.error(f"Error in AI inference: {error}")
+            app.logger.error(f"Error in AI inference for provider {selected_ai_provider}: {error}")
             return jsonify({"error": error}), 500
 
         app.logger.info("Successfully inferred field mappings.")

@@ -15,30 +15,128 @@ data flow. To enable true AI capabilities, the commented-out sections for API ca
 (e.g., to OpenAI, Google Gemini, Cohere) would need to be implemented, and the
 user would need to provide valid API keys.
 """
+"""
+ai_handler.py
+
+This module is intended to house the logic for interacting with AI services
+for tasks such as:
+1.  Advanced Resume Parsing: Extracting structured data (experience, education, skills)
+    from resume text if the basic `resume_parser.py` is insufficient.
+2.  Field Mapping Inference: Given a list of form fields extracted from a job
+    application webpage, predict the correct mapping of these fields to standard
+    user profile data keys (e.g., map "First Name" or "fname" to "firstName").
+
+Currently, this module uses a **placeholder rule-based system** for field mapping
+and has commented-out stubs for actual AI calls. To enable true AI capabilities,
+the API call sections would need to be implemented, and the user would need to
+provide valid API keys via the extension popup.
+"""
 import re
-# import json # Would be needed for actual AI prompt construction / result parsing
+import json # Needed for constructing JSON prompts or parsing JSON responses
 
-# --- Placeholder for AI Client Initialization ---
-# This section would contain functions to initialize clients for specific AI services.
-# Example (commented out for services like OpenAI):
-#
-# import openai
-#
-# def initialize_openai_client(api_key):
-#     """Initializes and returns an OpenAI client if the API key is valid."""
-#     if not api_key:
-#         return None, "OpenAI API key is missing."
-#     try:
-#         client = openai.OpenAI(api_key=api_key)
-#         # Optional: Test the client with a simple call, e.g., list models
-#         # client.models.list()
-#         return client, None
-#     except openai.AuthenticationError:
-#         return None, "OpenAI API key is invalid or expired."
-#     except Exception as e:
-#         return None, f"Failed to initialize OpenAI client: {str(e)}"
+# AI SDKs - Import with fallbacks if not installed, allowing rule-based to always work.
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    openai = None
+    OPENAI_AVAILABLE = False
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    genai = None
+    GEMINI_AVAILABLE = False
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    anthropic = None
+    ANTHROPIC_AVAILABLE = False
 
-# --- Basic Rule-Based Field Mapping (Serves as a Placeholder for AI) ---
+
+# --- AI Client Initialization Functions ---
+
+def initialize_openai_client(api_key):
+    """
+    Initializes and returns an OpenAI client.
+
+    Args:
+        api_key (str): The OpenAI API key.
+
+    Returns:
+        tuple: (client, error_message)
+               - client: OpenAI client instance if successful.
+               - error_message (str or None): Error message if initialization fails.
+    """
+    if not OPENAI_AVAILABLE:
+        return None, "OpenAI library is not installed. Please install it via 'pip install openai'."
+    if not api_key:
+        return None, "OpenAI API key is missing."
+    try:
+        client = openai.OpenAI(api_key=api_key)
+        # A lightweight way to test client validity might be client.models.list(), but adds a network call.
+        # For now, assume key is valid if client initializes without immediate error.
+        return client, None
+    except openai.AuthenticationError: # Specific error for bad keys
+        return None, "OpenAI API key is invalid or expired."
+    except Exception as e: # Catch other potential errors during client init
+        return None, f"Failed to initialize OpenAI client: {str(e)}"
+
+def initialize_gemini_client(api_key):
+    """
+    Configures the Google Gemini (genai) client.
+
+    Args:
+        api_key (str): The Google Gemini API key.
+
+    Returns:
+        tuple: (client_module, error_message)
+               - client_module: The configured `genai` module if successful.
+               - error_message (str or None): Error message if configuration fails.
+    """
+    if not GEMINI_AVAILABLE:
+        return None, "Google Generative AI library not installed. Install via 'pip install google-generativeai'."
+    if not api_key:
+        return None, "Google Gemini API key is missing."
+    try:
+        genai.configure(api_key=api_key)
+        # Gemini's genai.configure doesn't typically raise auth errors immediately.
+        # Errors often occur on the first actual API call.
+        # We return the module itself as a sign of successful configuration.
+        return genai, None
+    except Exception as e:
+        return None, f"Failed to configure Google Gemini client: {str(e)}. Key might be invalid or quotas exceeded."
+
+def initialize_claude_client(api_key):
+    """
+    Initializes and returns an Anthropic Claude client.
+
+    Args:
+        api_key (str): The Anthropic Claude API key.
+
+    Returns:
+        tuple: (client, error_message)
+               - client: Anthropic client instance if successful.
+               - error_message (str or None): Error message if initialization fails.
+    """
+    if not ANTHROPIC_AVAILABLE:
+        return None, "Anthropic library not installed. Install via 'pip install anthropic'."
+    if not api_key:
+        return None, "Anthropic Claude API key is missing."
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        # Similar to OpenAI, a lightweight test call could be added if desired.
+        return client, None
+    except anthropic.APIConnectionError: # More specific error for connection issues.
+         return None, "Could not connect to Anthropic API. Check network or API status."
+    except anthropic.AuthenticationError: # Specific error for bad keys.
+        return None, "Anthropic Claude API key is invalid."
+    except Exception as e:
+        return None, f"Failed to initialize Anthropic Claude client: {str(e)}"
+
+
+# --- Basic Rule-Based Field Mapping (Serves as a Placeholder/Fallback for AI) ---
 
 # `BASIC_FIELD_MAPPINGS` defines common variations for standard data fields.
 # This dictionary is used by the rule-based logic to guess field mappings.
@@ -126,165 +224,171 @@ def _find_mapping_rule_based(field_info):
     return None
 
 
-def infer_form_fields_with_ai(fields, api_key=None):
+def infer_form_fields_with_ai(fields, user_data_context, selected_provider="rule_based", api_key=None):
     """
-    Main function to infer mappings for a list of form fields.
-    **Currently, this function uses a rule-based placeholder (`_find_mapping_rule_based`)
-    instead of making actual calls to an AI service.**
+    Infers mappings for a list of webpage form fields to standardized user data keys.
 
-    The intended AI-driven process would be:
-    1. Initialize an AI client using the provided `api_key`.
-    2. Construct a detailed prompt containing the extracted `fields` data and instructions
-       for mapping them to a predefined schema of user profile information.
-    3. Send the prompt to the AI service.
-    4. Parse the AI's JSON response to get the field mappings.
+    This function orchestrates the field mapping process. It attempts to use a specified
+    AI provider (OpenAI, Gemini, Claude) if selected by the user and a valid API key is provided.
+    If an AI provider is chosen, it initializes the respective client, constructs a prompt
+    with the form field data and user data context, and (in a full implementation) would
+    make an API call to the AI service to get field mappings.
+
+    Currently, the actual AI API calls are placeholder sections. If an AI provider is selected
+    but the call is not implemented or fails, or if "rule_based" is selected, the function
+    falls back to the `_find_mapping_rule_based` method.
 
     Args:
-        fields (list): A list of dictionaries, where each dictionary describes a form field
-                       extracted by the content script (e.g., containing 'id', 'name', 'labelText', etc.).
-        api_key (str, optional): The user's API key for the AI service. This is not used
-                                 by the current rule-based placeholder but would be crucial for
-                                 actual AI integration.
+        fields (list of dict): Data for each extracted form field from the webpage.
+            Each dict contains keys like 'tempId', 'id', 'name', 'labelText', 'type', etc.
+        user_data_context (dict): Comprehensive user data (profile, resume, employment Qs)
+            to provide context for AI-driven mapping.
+        selected_provider (str, optional): Identifier for the chosen AI service
+            (e.g., "openai", "gemini", "claude"). Defaults to "rule_based".
+        api_key (str, optional): The API key for the selected AI provider.
+            Required if `selected_provider` is not "rule_based".
 
     Returns:
         tuple: (mapped_fields, error_message)
-               - mapped_fields (dict): A dictionary where keys are standardized field names
-                                     (e.g., "firstName") and values are the corresponding
-                                     page field identifiers (e.g., 'id' or 'tempId' of the input element)
-                                     that the content script should use for filling.
-                                     Example: {"firstName": "page_field_id_123", "email": "user_email_on_page"}
-               - error_message (str or None): An error message if something significant went wrong.
-                                             For the placeholder, this is usually None.
+            - mapped_fields (dict): A dictionary where keys are standardized user data keys
+              (e.g., "firstName") and values are the 'tempId' (or 'id'/'name') of the
+              corresponding webpage form field. Example: `{"email": "tempId_123"}`.
+            - error_message (str or None): A string containing an error message if a
+              significant issue occurred (e.g., client init failure for chosen provider if not falling back),
+              otherwise None. For rule-based or successful placeholder AI, this is usually None.
     """
     app_logger = None
     try:
-        from flask import current_app # Optional: for logging if running within a Flask app context
+        from flask import current_app
         app_logger = current_app.logger
-        if app_logger: app_logger.info(f"AI Handler received {len(fields)} fields for inference. API key provided: {'Yes' if api_key else 'No'}")
-    except RuntimeError: # Not in Flask app context (e.g. direct script run)
-        print(f"AI Handler received {len(fields)} fields for inference. API key provided: {'Yes' if api_key else 'No'}")
+        log_func = app_logger.info if app_logger else print
+    except RuntimeError: # Not in Flask app context
+        log_func = print
+
+    log_func(f"Inferring fields using provider: {selected_provider}. API key provided: {'Yes' if api_key else 'No'}.")
+    log_func(f"Number of fields to map: {len(fields)}. User data context keys: {list(user_data_context.keys()) if user_data_context else 'None'}")
 
 
-    # --- BEGIN ACTUAL AI INTEGRATION (Commented Out Placeholder) ---
-    # The following section outlines how real AI integration would look.
-    # It's currently bypassed in favor of the rule-based approach below.
+    ai_client = None
+    init_error = None
 
-    # Step 1: Initialize AI Client (e.g., OpenAI, Gemini, Cohere)
-    # This would typically involve using the `api_key` provided by the user.
-    # Example for OpenAI:
-    # ai_client, init_error = initialize_openai_client(api_key)
-    # if init_error:
-    #     log_message = f"AI Client Initialization Error: {init_error}"
-    #     if app_logger: app_logger.error(log_message)
-    #     else: print(log_message)
-    #     return None, init_error # Return error if client can't be initialized
-    #
-    # if not ai_client: # Should be caught by init_error, but as a safeguard
-    #     fallback_msg = "AI client not available. Falling back to rule-based mapping."
-    #     if app_logger: app_logger.warning(fallback_msg)
-    #     else: print(fallback_msg)
-    #     # Fallback to rule-based implemented below
-    # else:
-    #     # Step 2: Construct a detailed prompt for the AI
-    #     # The prompt should describe the task, provide the extracted form fields (as JSON),
-    #     # list the target standardized keys (e.g., "firstName", "email"), and specify
-    #     # the desired JSON output format for the mappings.
-    #     prompt = f"""
-    #     Analyze the following HTML form fields extracted from a job application page:
-    #     {json.dumps(fields, indent=2)}
-    #
-    #     Your task is to map these fields to the following standard user profile keys:
-    #     {json.dumps(list(BASIC_FIELD_MAPPINGS.keys()), indent=2)}
-    #
-    #     Return a JSON object where each key is a standard user profile key (e.g., "firstName")
-    #     and its value is the 'tempId' (preferred) or 'id' or 'name' of the corresponding input field from the page.
-    #     If a field cannot be confidently mapped, omit it from the result.
-    #     Example output: {{ "email": "field_temp_id_2", "lastName": "input_lname" }}
-    #     """
-    #
-    #     # Step 3: Make the API Call to the AI service
-    #     try:
-    #         # Example using OpenAI's chat completions:
-    #         # response = ai_client.chat.completions.create(
-    #         #     model="gpt-3.5-turbo", # Or a more advanced model like gpt-4
-    #         #     messages=[{"role": "system", "content": "You are an expert in web form field mapping."},
-    #         #               {"role": "user", "content": prompt}],
-    #         #     response_format={"type": "json_object"} # For models that support JSON mode
-    #         # )
-    #         # ai_result_str = response.choices[0].message.content
-    #         # mapped_fields_from_ai = json.loads(ai_result_str) # Parse the JSON string from AI
-    #
-    #         # log_message = f"AI mapping successful: {mapped_fields_from_ai}"
-    #         # if app_logger: app_logger.info(log_message)
-    #         # else: print(log_message)
-    #         # return mapped_fields_from_ai, None # Return the AI's mapping
-    #
-    #     except Exception as e:
-    #         error_msg = f"AI API call or processing failed: {str(e)}. Falling back to rule-based."
-    #         if app_logger: app_logger.error(error_msg)
-    #         else: print(error_msg)
-    #         # Fallback to rule-based implemented below
-    #
-    # --- END ACTUAL AI INTEGRATION (Commented Out Placeholder) ---
+    if selected_provider == "openai":
+        ai_client, init_error = initialize_openai_client(api_key)
+    elif selected_provider == "gemini":
+        ai_client, init_error = initialize_gemini_client(api_key)
+    elif selected_provider == "claude":
+        ai_client, init_error = initialize_claude_client(api_key)
+    elif selected_provider != "rule_based":
+        init_error = f"Unknown AI provider: {selected_provider}. Falling back to rule-based."
+
+    if init_error:
+        log_func(f"AI Client Initialization Error for {selected_provider}: {init_error}")
+        # Fallback to rule-based if specific AI provider fails or is unknown
+        selected_provider = "rule_based"
+        log_func("Falling back to rule_based due to client initialization error.")
 
 
-    # --- Current: Rule-Based Fallback/Placeholder Implementation ---
-    # This logic is used if AI integration is not enabled or fails.
-    if app_logger: app_logger.info("Using rule-based mapping as AI placeholder/fallback.")
-    else: print("Using rule-based mapping as AI placeholder/fallback.")
+    if selected_provider != "rule_based" and ai_client:
+        # --- Actual AI Call Section (Placeholder for now) ---
+        log_func(f"Attempting to use AI provider: {selected_provider}")
 
-    inferred_mappings = {} # Stores {standard_key: page_field_identifier}
-    unmapped_fields_details = [] # For logging fields that couldn't be mapped
+        # Step 2: Construct a prompt for the AI
+        # This is a generic prompt and would need significant refinement for each AI model.
+        # It should include the extracted `fields`, the `user_data_context` keys (or relevant values),
+        # and clear instructions on the desired JSON output format for mappings.
+
+        # Create a simplified list of user data keys they can map to.
+        available_user_data_keys = list(user_data_context.keys() if user_data_context else [])
+
+        prompt_fields_json = json.dumps(fields, indent=2)
+        prompt_user_keys_json = json.dumps(available_user_data_keys, indent=2)
+
+        prompt = f"""
+        You are an expert AI assistant that maps HTML form fields from job applications
+        to a predefined set of user data keys.
+
+        Here are the HTML form fields extracted from a webpage:
+        {prompt_fields_json}
+
+        Here are the available user data keys you should try to map the fields to:
+        {prompt_user_keys_json}
+
+        Based on the field information (labelText, name, id, placeholder, ariaLabel, type, tagName),
+        provide a JSON object where each key is one of the available user data keys,
+        and its value is the 'tempId' (preferred, if available) or 'id' or 'name' of the
+        corresponding input field from the webpage.
+
+        Prioritize strong semantic matches. If a field cannot be confidently mapped, omit it.
+        Example output: {{ "email": "field_temp_id_2", "lastName": "input_lname", "visaStatus": "f_visa_sponsorship" }}
+        """
+        log_func(f"Generated prompt for {selected_provider} (first 300 chars): {prompt[:300]}...")
+
+        try:
+            # This is where you would make the actual API call
+            # For example, with OpenAI:
+            # if selected_provider == "openai" and openai:
+            #     response = ai_client.chat.completions.create(
+            #         model="gpt-3.5-turbo", # Or a more advanced model
+            #         messages=[
+            #             {"role": "system", "content": "You are an expert in web form field mapping."},
+            #             {"role": "user", "content": prompt}
+            #         ],
+            #         response_format={"type": "json_object"} # If supported
+            #     )
+            #     ai_result_str = response.choices[0].message.content
+            #     mapped_fields_from_ai = json.loads(ai_result_str)
+            #     log_func(f"AI mapping successful from {selected_provider}: {mapped_fields_from_ai}")
+            #     return mapped_fields_from_ai, None
+
+            # Similar blocks for Gemini and Claude would go here.
+            # For now, we'll simulate an AI failure to fall back to rule-based.
+            log_func(f"AI call to {selected_provider} is currently a placeholder. Falling back to rule-based.")
+            raise NotImplementedError(f"Actual AI call for {selected_provider} not implemented yet.")
+
+        except NotImplementedError as nie: # Catching our specific placeholder exception
+             log_func(str(nie))
+             # Fall through to rule-based below
+        except Exception as e:
+            log_func(f"AI API call or processing failed for {selected_provider}: {str(e)}. Falling back to rule-based.")
+            # Fall through to rule-based below
+
+    # --- Rule-Based Fallback/Placeholder Implementation ---
+    # This logic is used if AI is not selected, client init fails, or AI call fails.
+    log_func("Using rule-based mapping.")
+
+    inferred_mappings = {}
+    unmapped_fields_details = []
 
     for field_obj in fields:
-        # The `field_obj` is expected to have 'tempId' (generated by content.js if no id),
-        # 'id', 'name', 'labelText', 'placeholder', 'ariaLabel'.
-        # The 'tempId' is the preferred identifier to ensure uniqueness if original 'id' is missing or duplicated.
         page_field_identifier = field_obj.get('tempId') or field_obj.get('id') or field_obj.get('name')
 
         if not page_field_identifier:
-            # This field is problematic as it lacks a reliable identifier.
-            # Log it and skip, as we can't reliably target it for filling.
             unmapped_fields_details.append(field_obj)
-            if app_logger: app_logger.warning(f"Skipping field due to missing identifier: {field_obj}")
-            else: print(f"Skipping field due to missing identifier: {field_obj}")
+            log_func(f"Skipping field due to missing identifier: {field_obj}")
             continue
 
-        # Use the rule-based function to find a mapping.
         standardized_key = _find_mapping_rule_based(field_obj)
 
         if standardized_key:
-            # If this standard key (e.g., "email") is already mapped to a field,
-            # the current simple rule-based logic will take the first one it encounters.
-            # An AI could potentially handle multiple inputs for one concept or rank them.
             if standardized_key not in inferred_mappings:
                 inferred_mappings[standardized_key] = page_field_identifier
             else:
-                # Log that a potential conflict or duplicate mapping occurred.
                 log_msg_conflict = (f"Rule-based: Standard key '{standardized_key}' already mapped to "
                                     f"'{inferred_mappings[standardized_key]}'. Ignoring new candidate "
                                     f"'{page_field_identifier}' for field: {field_obj.get('labelText') or field_obj.get('name')}.")
-                if app_logger: app_logger.warning(log_msg_conflict)
-                else: print(log_msg_conflict)
+                log_func(log_msg_conflict)
         else:
-            # This field was not mapped by the rule-based system.
             unmapped_fields_details.append(field_obj)
 
-    # Logging the outcome of the rule-based mapping.
     num_mapped = len(inferred_mappings)
     num_unmapped = len(unmapped_fields_details)
     log_summary = f"Rule-based mapping complete. Mapped: {num_mapped} fields, Unmapped: {num_unmapped} fields."
-    if app_logger:
-        app_logger.info(log_summary)
-        if num_unmapped > 0:
-            app_logger.debug(f"Unmapped fields details: {unmapped_fields_details}")
-    else:
-        print(log_summary)
-        if num_unmapped > 0:
-            print(f"Unmapped fields details: {unmapped_fields_details}")
+    log_func(log_summary)
+    if num_unmapped > 0 and app_logger: # Only log details if Flask logger is available
+        app_logger.debug(f"Unmapped fields details (rule-based): {unmapped_fields_details}")
+    elif num_unmapped > 0:
+         print(f"Unmapped fields details (rule-based): {unmapped_fields_details}")
 
-    # The function returns the dictionary of inferred mappings.
-    # The content script will use this: e.g., for "firstName", fill the element with id/tempId stored here.
     return inferred_mappings, None
 
 

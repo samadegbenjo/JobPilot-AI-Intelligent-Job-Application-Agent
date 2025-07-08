@@ -52,13 +52,77 @@
         </div>
 
         <div class="section">
-            <h2><img src="../icons/api_key_icon.svg" alt="API Keys" class="icon"> API Keys</h2>
-            <p class="small-text">API keys are stored locally. For enhanced security in a production environment, consider a backend proxy.</p>
-            <label for="aiServiceKey">Generic AI Service API Key:</label>
-            <input type="password" id="aiServiceKey" name="aiServiceKey">
+            <h2><img src="../icons/api_key_icon.svg" alt="API Keys" class="icon"> AI Configuration</h2>
+            <p class="small-text">Select your preferred AI provider and enter the corresponding API key. Keys are stored locally (not recommended for production).</p>
+
+            <!-- AI Provider Selection Dropdown -->
+            <label for="aiProvider">AI Provider:</label>
+            <select id="aiProvider" name="aiProvider">
+                <option value="rule_based">Rule-Based (No API Key Needed)</option>
+                <option value="openai">OpenAI (ChatGPT)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="claude">Anthropic (Claude)</option>
+                <!-- Add other providers as needed -->
+            </select>
+
+            <!-- API Key Input Groups - visibility controlled by JS based on aiProvider selection -->
+            <div id="apiKeyOpenAI" class="api-key-input-group">
+                <label for="openaiApiKey">OpenAI API Key:</label>
+                <input type="password" id="openaiApiKey" name="openaiApiKey" placeholder="sk-...">
+            </div>
+            <div id="apiKeyGemini" class="api-key-input-group" style="display: none;">
+                <label for="geminiApiKey">Google Gemini API Key:</label>
+                <input type="password" id="geminiApiKey" name="geminiApiKey" placeholder="AIzaSy...">
+            </div>
+            <div id="apiKeyClaude" class="api-key-input-group" style="display: none;">
+                <label for="claudeApiKey">Anthropic Claude API Key:</label>
+                <input type="password" id="claudeApiKey" name="claudeApiKey" placeholder="sk-ant-...">
+            </div>
         </div>
 
-        <button id="saveSettings">Save Settings</button>
+        <!-- Employment Questions Section -->
+        <div class="section">
+            <h2><img src="../icons/employment_icon.svg" alt="Employment" class="icon"> Employment Questions</h2>
+
+            <label for="visaStatus">Require Visa Sponsorship?</label>
+            <select id="visaStatus" name="visaStatus">
+                <option value="">- Select -</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="maybe">Maybe/Discuss</option>
+            </select>
+
+            <label for="workAuthorization">Authorized to work in the country of application?</label>
+             <select id="workAuthorization" name="workAuthorization">
+                <option value="">- Select -</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+
+            <label for="relocation">Willing to Relocate?</label>
+            <select id="relocation" name="relocation">
+                <option value="">- Select -</option>
+                <option value="no">No</option>
+                <option value="yes_general">Yes (General)</option>
+                <option value="yes_specific">Yes (Specific locations only)</option>
+            </select>
+            <input type="text" id="relocationSpecifics" name="relocationSpecifics" placeholder="If specific, list locations" style="display: none;">
+
+            <label for="desiredSalary">Desired Salary (e.g., 95000 USD, or leave blank):</label>
+            <input type="text" id="desiredSalary" name="desiredSalary" placeholder="e.g., 95000 USD">
+
+            <label for="availabilityDate">Availability Date:</label>
+            <input type="date" id="availabilityDate" name="availabilityDate">
+        </div>
+
+        <!-- Action Buttons Section -->
+        <div class="section">
+            <h2><img src="../icons/action_icon.svg" alt="Action" class="icon"> Actions</h2>
+            <!-- Button to trigger filling the current page -->
+            <button id="fillCurrentPageButton" class="action-button">Fill Current Page</button>
+        </div>
+
+        <button id="saveSettings" class="save-button">Save All Settings</button>
         <p id="statusMessage" class="status-message"></p>
     </div>
     <script src="../js/popup.js"></script>
